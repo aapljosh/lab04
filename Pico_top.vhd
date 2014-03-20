@@ -53,7 +53,14 @@ architecture Behavioral of atlys_remote_terminal_pb is
 			baud_16x_en : out std_logic -- 16*9.6 kHz
 		);
 	end component;
-
+	
+	component nibble_to_ascii
+		port(
+			nibble : in std_logic_vector(3 downto 0);
+         ascii  : out std_logic_vector(7 downto 0)
+		);
+	end component;
+	
 	component uart_rx6
 		Port(
 			serial_in 				: in std_logic;
@@ -102,7 +109,8 @@ signal        uart_rx_reset : std_logic;
 
 signal	en_16_x_baud : std_logic;
 signal	last_input	: std_logic_vector(7 downto 0); --output of the pico to feed back to the tx module
-signal	input_data_read : std_logic;
+signal	sw_msb : std_logic_vector(7 downto 0);
+signal	sw_lsb : std_logic_vector(7 downto 0);
 
 ---------------
 -- Declaration of the KCPSM6 component including default values for generics.
@@ -234,6 +242,19 @@ begin
 			reset => reset,
 			baud_16x_en => en_16_x_baud -- 16*9.6 kHz
 		);
+
+--sw to ascii
+	sw_msb_top: nibble_to_ascii
+		port map(
+			nibble =>	sw(7 downto 4),
+			ascii =>		sw_msb 
+		);
+	sw_lsb_top: nibble_to_ascii
+		port map(
+			nibble =>	sw(3 downto 0),
+			ascii =>		sw_lsb
+		);
+
 		
 --UART
 --
@@ -272,35 +293,21 @@ port map (              data_in => uart_tx_data_in,
                        rdl => kcpsm6_reset,
                        clk => clk);
 							  
-	
---	
---	in_port <=  "0000000" & uart_rx_data_present when port_id = x"00" and read_strobe = '1' else
---					uart_rx_data_out when port_id = x"01" and read_strobe = '1' and uart_rx_data_present = '1';--and read_strobe = '1' uart_rx_data_present = '1' and
---					
---	--to buffer_read we need to tell rx it has been read				
---	read_from_uart_rx  <= '0' ;--when read_strobe = '1' and port_id = x"01" and uart_rx_data_present = '1' else
---
---	--uart_tx_data_in <= out_port when write_strobe = '1' and port_id = x"02"; --uart_tx_data_present = '1' and
---	led <= out_port when port_id = x"02";
---	--to buffer_write
---	write_to_uart_tx  <=	'1' when write_strobe = '1' and port_id = x"02" else
---								'0';
-
+--rx
 in_port <=	"0000000" & uart_rx_data_present when port_id = x"00" else
 				uart_rx_data_out when uart_rx_data_present = '1' and port_id = x"01" else
+				sw_msb when port_id = x"03" else
+				sw_lsb when port_id = x"04" else
 				"XXXXXXXX";
-				
+--tell rx we have read				
 read_from_uart_rx <=	'1' when read_strobe = '1' and port_id = x"01" else
 							'0';
 
+--tx
 uart_tx_data_in <=	out_port when uart_tx_data_present = '1' and port_id = x"02" else
 							"XXXXXXXX";
-
-last_input <=	out_port when uart_tx_data_present = '1' and port_id = x"02" else
-					last_input;
-
-led <= last_input;
-
+led <= "11000011";
+--tell tx we wrote
 write_to_uart_tx <=	'1' when write_strobe = '1' and port_id = x"02" else
 							'0';
 										
