@@ -39,22 +39,22 @@ end clk_to_baud;
 
 architecture Behavioral of clk_to_baud is
 
-signal count: integer := 0;
+signal baud_count: integer := 0;
 
 begin
 
-	process (clk)	
-	begin	
-		if(rising_edge(clk)) then
-			if count = 325 then
-				count <= 0;
+	baud_rate: process(clk)
+	begin
+		if clk'event and clk = '1' then
+			if baud_count = 651 then
+				baud_count <= 0;
 				baud_16x_en <= '1';
 			else
-				count <= count + 1;
+				baud_count <= baud_count + 1;
 				baud_16x_en <= '0';
 			end if;
 		end if;
-	end process;
+	end process baud_rate;
 
 
 end Behavioral;

@@ -30,22 +30,22 @@ use IEEE.STD_LOGIC_1164.ALL;
 --use UNISIM.VComponents.all;
 
 entity atlys_remote_terminal_pb is
-    port (
-             clk        : in  std_logic;
-             reset      : in  std_logic;
-             serial_in  : in  std_logic;
-             serial_out : out std_logic;
-             switch     : in  std_logic_vector(7 downto 0);
-             led        : out std_logic_vector(7 downto 0)
-         );
+	port (
+		clk				: in  std_logic;
+		reset				: in  std_logic;
+		serial_in_ucf	: in  std_logic;
+		serial_out_ucf	: out std_logic;
+		sw					: in  std_logic_vector(7 downto 0);
+		Led				: out std_logic_vector(7 downto 0)
+	);
 end atlys_remote_terminal_pb;
 
 architecture Behavioral of atlys_remote_terminal_pb is
 
 -------------------------------------------------------------------------------------------
--- Components
+-- Components -----------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------
---
+
 	component clk_to_baud
 		port (	
 			clk         : in std_logic;  -- 25 MHz
@@ -80,9 +80,33 @@ architecture Behavioral of atlys_remote_terminal_pb is
 			buffer_reset			: in std_logic;
 			clk						: in std_logic);
 	end component;
+
+--rx/tx signals
+-- Signals used to connect UART_TX6
 --
+signal      uart_tx_data_in : std_logic_vector(7 downto 0);
+signal     write_to_uart_tx : std_logic;
+signal uart_tx_data_present : std_logic;
+signal    uart_tx_half_full : std_logic;
+signal         uart_tx_full : std_logic;
+signal         uart_tx_reset : std_logic;
+--
+-- Signals used to connect UART_RX6
+--
+signal     uart_rx_data_out : std_logic_vector(7 downto 0);
+signal    read_from_uart_rx : std_logic;
+signal uart_rx_data_present : std_logic;
+signal    uart_rx_half_full : std_logic;
+signal         uart_rx_full : std_logic;
+signal        uart_rx_reset : std_logic;
+
+signal	en_16_x_baud : std_logic;
+signal	last_input	: std_logic_vector(7 downto 0); --output of the pico to feed back to the tx module
+signal	input_data_read : std_logic;
+
+---------------
 -- Declaration of the KCPSM6 component including default values for generics.
---
+---------------
 
   component kcpsm6 
     generic(                 hwbuild : std_logic_vector(7 downto 0) := X"00";
@@ -210,50 +234,32 @@ begin
 			reset => reset,
 			baud_16x_en => en_16_x_baud -- 16*9.6 kHz
 		);
---UART
-	tx: uart_tx6
-		port map ( 
-			data_in => uart_tx_data_in,
-			en_16_x_baud => en_16_x_baud,
-			serial_out => uart_tx,
-			buffer_write => write_to_uart_tx,
-			buffer_data_present => uart_tx_data_present,
-			buffer_half_full => uart_tx_half_full,
-			buffer_full => uart_tx_full,
-			buffer_reset => uart_tx_reset,
-			clk => clk
-		);
 		
-	uart_rx <= uart_tx; -- loop back	
-	rx: uart_rx6
-		port map ( 
-			serial_in => uart_rx,
-			en_16_x_baud => en_16_x_baud,
-			data_out => uart_rx_data_out ,
-			buffer_read => read_from_uart_rx,
-			buffer_data_present => uart_rx_data_present,
-			buffer_half_full => uart_rx_half_full,
-			buffer_full => uart_rx_full,
-			buffer_reset => uart_rx_reset,
-			clk => clk
-		);
-  --
-  -- The default Program Memory recommended for development.
-  -- 
-  -- The generics should be set to define the family, program size and enable the JTAG
-  -- Loader. As described in the documentation the initial recommended values are.  
-  --    'S6', '1' and '1' for a Spartan-6 design.
-  --    'V6', '2' and '1' for a Virtex-6 design.
-  --    '7S', '2' and '1' for a Artix-7, Kintex-7 or Virtex-7 design.
-  -- Note that all 12-bits of the address are connected regardless of the program size
-  -- specified by the generic. Within the program memory only the appropriate address bits
-  -- will be used (e.g. 10 bits for 1K memory). This means it that you only need to modify 
-  -- the generic when changing the size of your program.   
-  --
-  -- When JTAG Loader updates the contents of the program memory KCPSM6 should be reset 
-  -- so that the new program executes from address zero. The Reset During Load port 'rdl' 
-  -- is therefore connected to the reset input of KCPSM6.
-  --
+--UART
+--
+rx: uart_rx6 
+port map (            serial_in => serial_in_ucf,
+                     en_16_x_baud => en_16_x_baud,
+                         data_out => uart_rx_data_out,
+                      buffer_read => read_from_uart_rx, --uart_tx_data_present,--data on tx line read_from_uart_rx
+              buffer_data_present => uart_rx_data_present,
+                 buffer_half_full => uart_rx_half_full,
+                      buffer_full => uart_rx_full,
+                     buffer_reset => uart_rx_reset,              
+                              clk => clk);
+										
+tx: uart_tx6 
+port map (              data_in => uart_tx_data_in,
+                   en_16_x_baud => en_16_x_baud,
+                     serial_out => serial_out_ucf,
+                   buffer_write => write_to_uart_tx,--uart_rx_data_present,--data rx present write_to_uart_tx
+            buffer_data_present => uart_tx_data_present,
+               buffer_half_full => uart_tx_half_full,
+                    buffer_full => uart_tx_full,
+                     buffer_reset => uart_tx_reset,              
+                              clk => clk);
+
+
 
 
   program_rom: remote_terminal_picoblaze_asm                   --Name to match your PSM file
@@ -267,33 +273,36 @@ begin
                        clk => clk);
 							  
 	
-	input_ports: process(clk)
-	begin
-		if clk'event and clk = '1' then
-		
-			if port_id = X"AF" then
-				in_port <= sw;
-			end if;
-			if port_id = X"07" then
-				in_port(0) <= btn(0);
-				in_port(1) <= btn(1);
-				in_port(2) <= btn(2);
-				in_port(3) <= btn(3);
-				in_port(4) <= btn(4);
-			end if;
-		end if;
-	end process input_ports;
-	
-	
-	output_ports: process(clk)
-	begin
-		if clk'event and clk = '1' then
-			if port_id = X"07" then
-				Led <= out_port;
-			end if;
-		end if;
-	end process output_ports;
+--	
+--	in_port <=  "0000000" & uart_rx_data_present when port_id = x"00" and read_strobe = '1' else
+--					uart_rx_data_out when port_id = x"01" and read_strobe = '1' and uart_rx_data_present = '1';--and read_strobe = '1' uart_rx_data_present = '1' and
+--					
+--	--to buffer_read we need to tell rx it has been read				
+--	read_from_uart_rx  <= '0' ;--when read_strobe = '1' and port_id = x"01" and uart_rx_data_present = '1' else
+--
+--	--uart_tx_data_in <= out_port when write_strobe = '1' and port_id = x"02"; --uart_tx_data_present = '1' and
+--	led <= out_port when port_id = x"02";
+--	--to buffer_write
+--	write_to_uart_tx  <=	'1' when write_strobe = '1' and port_id = x"02" else
+--								'0';
 
+in_port <=	"0000000" & uart_rx_data_present when port_id = x"00" else
+				uart_rx_data_out when uart_rx_data_present = '1' and port_id = x"01" else
+				"XXXXXXXX";
+				
+read_from_uart_rx <=	'1' when read_strobe = '1' and port_id = x"01" else
+							'0';
 
+uart_tx_data_in <=	out_port when uart_tx_data_present = '1' and port_id = x"02" else
+							"XXXXXXXX";
+
+last_input <=	out_port when uart_tx_data_present = '1' and port_id = x"02" else
+					last_input;
+
+led <= last_input;
+
+write_to_uart_tx <=	'1' when write_strobe = '1' and port_id = x"02" else
+							'0';
+										
 end Behavioral;
 

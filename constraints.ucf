@@ -4,6 +4,7 @@
 VCCAUX = 3.3;
 
 NET "clk" LOC = "L15" | PERIOD = 100 MHz;
+NET "reset" LOC = "F5" | IOSTANDARD = LVCMOS33;
 
 #NET "data"		LOC = "T3"| IOSTANDARD = LVCMOS33; # Bank = 2,  Pin name = IO_L62N_D6,     Sch name = JA-D0_N
 #NET "latch"	LOC = "R3"| IOSTANDARD = LVCMOS33; # Bank = 2,  Pin name = IO_L62P_D5,     Sch name = JA-D0_P
@@ -20,11 +21,11 @@ NET "clk" LOC = "L15" | PERIOD = 100 MHz;
  NET "Led<7>" LOC = "N12"; # Bank = 2, Pin name = IO_L13P_M1_2,		   Sch name = M1/LD7
  
 # onBoard PUSH BUTTONS 
- NET "btn<0>" LOC = "F5"; # Bank = 2, Pin name = IO_L1N_M0_CMPMISO_2, Sch name = M0/RESET
- NET "btn<1>" LOC = "N4";  # Bank = 3, Pin name = IO_L1P, 	   		   Sch name = BTNU
- NET "btn<2>" LOC = "P4";  # Bank = 3, Pin name = IO_L2P, 	   		   Sch name = BTNL
- NET "btn<3>" LOC = "P3";  # Bank = 3, Pin name = IO_L2N, 	   		   Sch name = BTND
- NET "btn<4>" LOC = "F6";  # Bank = 3, Pin name = IO_L55P_M3A13, 	   Sch name = BTNR
+#NET "btn<0>" LOC = "F5"; # Bank = 2, Pin name = IO_L1N_M0_CMPMISO_2, Sch name = M0/RESET
+#NET "btn<1>" LOC = "N4";  # Bank = 3, Pin name = IO_L1P, 	   		   Sch name = BTNU
+#NET "btn<2>" LOC = "P4";  # Bank = 3, Pin name = IO_L2P, 	   		   Sch name = BTNL
+#NET "btn<3>" LOC = "P3";  # Bank = 3, Pin name = IO_L2N, 	   		   Sch name = BTND
+#NET "btn<4>" LOC = "F6";  # Bank = 3, Pin name = IO_L55P_M3A13, 	   Sch name = BTNR
  
 # onBoard SWITCHES
  NET "sw<0>" LOC = "A10"; # Bank = 0, Pin name = IO_L37N_GCLK12,      	Sch name = SW0
@@ -37,5 +38,5 @@ NET "clk" LOC = "L15" | PERIOD = 100 MHz;
  NET "sw<7>" LOC = "E4";  # Bank = 3, Pin name = IO_L54P_M3RESET,       Sch name = SW7
  
  # USB UART Connector
- NET "UartRx" LOC = "A16"; # Bank = 0, Pin name = IO_L66N_SCP0, Sch name = USBB-RXD
- NET "UartTx" LOC = "B16"; # Bank = 0, Pin name = IO_L66P_SCP1, Sch name = USBB-TXD
+ NET "serial_in_ucf" LOC = "A16"; # Bank = 0, Pin name = IO_L66N_SCP0, Sch name = USBB-RXD
+ NET "serial_out_ucf" LOC = "B16"; # Bank = 0, Pin name = IO_L66P_SCP1, Sch name = USBB-TXD
