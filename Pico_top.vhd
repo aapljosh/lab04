@@ -61,6 +61,14 @@ architecture Behavioral of atlys_remote_terminal_pb is
 		);
 	end component;
 	
+	component ascii_to_nibble
+		port (
+			ascii		: in std_logic_vector(7 downto 0);
+			nibble	: out std_logic_vector(3 downto 0)
+		);
+	end component;
+
+	
 	component uart_rx6
 		Port(
 			serial_in 				: in std_logic;
@@ -109,8 +117,13 @@ signal        uart_rx_reset : std_logic;
 
 signal	en_16_x_baud : std_logic;
 signal	last_input	: std_logic_vector(7 downto 0); --output of the pico to feed back to the tx module
+
 signal	sw_msb : std_logic_vector(7 downto 0);
 signal	sw_lsb : std_logic_vector(7 downto 0);
+
+signal	led_msb_ascii : std_logic_vector(7 downto 0) := X"31";--1
+signal	led_lsb_ascii : std_logic_vector(7 downto 0) := X"31";--1
+signal	change_led	  : std_logic := '0';
 
 ---------------
 -- Declaration of the KCPSM6 component including default values for generics.
@@ -254,7 +267,18 @@ begin
 			nibble =>	sw(3 downto 0),
 			ascii =>		sw_lsb
 		);
-
+--led to nibble
+	led_msb_top: ascii_to_nibble
+		port map(
+			ascii => led_msb_ascii,
+			nibble => led(7 downto 4)
+		);
+	led_lsb_top: ascii_to_nibble
+		port map(
+			ascii => led_lsb_ascii,
+			nibble => led(3 downto 0)
+		);
+	
 		
 --UART
 --
@@ -306,7 +330,16 @@ read_from_uart_rx <=	'1' when read_strobe = '1' and port_id = x"01" else
 --tx
 uart_tx_data_in <=	out_port when uart_tx_data_present = '1' and port_id = x"02" else
 							"XXXXXXXX";
-led <= "11000011";
+							
+--led <= "11000011";
+--change_led		<= out_port(0) when port_id = x"05" else
+--						change_led;
+
+led_msb_ascii	<=	out_port when port_id = x"06" and write_strobe = '1' else
+						led_msb_ascii;
+led_lsb_ascii	<=	out_port when port_id = x"07" and write_strobe = '1' else
+						led_lsb_ascii;
+
 --tell tx we wrote
 write_to_uart_tx <=	'1' when write_strobe = '1' and port_id = x"02" else
 							'0';
