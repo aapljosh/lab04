@@ -1,0 +1,10 @@
+##############################################################################
+## Filename:          C:/Users/C14Joshua.Nielsen/Documents/USAFA/ublaze/FPGArepo/MyProcessorIPLib/pcores/led_switches_v1_00_a/data/led_switches_v2_1_0.pao
+## Description:       Peripheral Analysis Order
+## Date:              Thu Apr 10 11:22:27 2014 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  all 
+lib axi_lite_ipif_v1_01_a  all 
+lib led_switches_v1_00_a user_logic vhdl
+lib led_switches_v1_00_a led_switches vhdl
